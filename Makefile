@@ -31,7 +31,7 @@ LIBS := -lcurl -lm -lcrypto
 
 # define the C++ source files
 SRC_DIR := sources
-SRCS := $(SRC_DIR)/main.cpp $(SRC_DIR)/board.cpp $(SRC_DIR)/player.cpp $(SRC_DIR)/game.cpp
+SRCS := $(SRC_DIR)/main.cpp $(SRC_DIR)/board.cpp $(SRC_DIR)/player.cpp $(SRC_DIR)/game.cpp $(SRC_DIR)/move.cpp
 
 # define the C++ object files
 #

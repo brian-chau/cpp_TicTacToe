@@ -71,7 +71,7 @@ bool Board::HasMorePlays()
 bool Board::IsCellPlayer(int row, int col, std::string character)
 {
 	row--, col--;
-	
+
 	// If it is out of bounds, then it is obviously not the player
 	if (!((col >= 0 && col < m_width) && (row >= 0 && row < m_height)))
 		return false;
@@ -155,7 +155,7 @@ void Board::FindWinningPositions(int winning_length)
 			winning_indexes.clear();
 		}
 	}
-	
+
 //	for (const std::vector<int> & streak : m_winning_streaks)
 //	{
 //		for (int pos : streak)
