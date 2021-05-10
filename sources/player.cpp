@@ -26,3 +26,4 @@ bool Player::IsAI()
 {
 	return m_isAI;
 }
+

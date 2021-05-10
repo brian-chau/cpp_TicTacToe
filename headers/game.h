@@ -13,7 +13,7 @@ public:
 	                    ~Game();
 	void                 Play();
 	void                 PrintBoard();
-	State                GameState(Player* p);
+	State                GameState(Player* p, int row, int col);
 
 private:
 	std::vector<Player*> m_player;

@@ -3,6 +3,7 @@
 #include "player.h"
 #include "game.h"
 #include <limits>
+#include <algorithm>
 #ifdef __cplusplus__
   #include <cstdlib>
 #else
@@ -13,7 +14,9 @@ Game::Game()
 	: m_player_index(0)
 	, m_winning_length(3)
 {
-	m_board   = new Board(5,5);
+	m_board = new Board(5,5);
+	m_board->FindWinningPositions(m_winning_length);
+
 	m_player.push_back(new Player("Alice", "X", false));
 	m_player.push_back(new Player("Bob",   "O", true));
 
@@ -43,66 +46,66 @@ void Game::Play()
 	do{
 		// Toggle players
 		m_current_player = m_player.at(m_player_index);
-		
+
 		// Display board
 		PrintBoard();
 
 		// Enter a location
-		int x(0), y(0);
+		int row(0), col(0);
 		bool location_set(false);
 		std::cout << m_current_player->GetName() << "'s turn." << std::endl;
-		do 
+		do
 		{
 			std::cout << "Enter a grid location:" << std::endl;
 			bool repeat(false);
-			
-			// Safe input for X
+
+			// Safe input for row
 			do {
 				repeat = false;
-				std::cout << "X: ";
-				std::cin  >> x;
+				std::cout << "Row: ";
+				std::cin  >> row;
 				if (std::cin.fail())
 				{
 					repeat = true;
 					system("clear");
 					PrintBoard();
-					std::cout << "Invalid position: x = " << x << std::endl;
-					std::cin.clear();
-					std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-				}
-			} while(repeat);
-			
-			// Safe input for Y
-			do {
-				repeat = false;
-				std::cout << "Y: ";
-				std::cin  >> y;
-				if (std::cin.fail())
-				{
-					repeat = true;
-					system("clear");
-					PrintBoard();
-					std::cout << "Invalid position: y = " << y << std::endl;
+					std::cout << "Invalid position: row = " << row << std::endl;
 					std::cin.clear();
 					std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 				}
 			} while(repeat);
 
-			location_set = m_board->SetLocation(m_current_player, x, y);
+			// Safe input for column
+			do {
+				repeat = false;
+				std::cout << "Col: ";
+				std::cin  >> col;
+				if (std::cin.fail())
+				{
+					repeat = true;
+					system("clear");
+					PrintBoard();
+					std::cout << "Invalid position: col = " << col << std::endl;
+					std::cin.clear();
+					std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+				}
+			} while(repeat);
+
+			location_set = m_board->SetLocation(m_current_player, row, col);
 			if (!location_set)
 			{
 				system("clear");
 				PrintBoard();
-				std::cout << "Invalid position: (" << x << ", " << y << ")" << std::endl;
+				std::cout << "Invalid position: (" << row << ", " << col << ")" << std::endl;
 			}
 		} while(!location_set);
-		
 		// Check for winners
-		game_state = GameState(m_current_player);
+		game_state = GameState(m_current_player, row, col);
 
 		m_player_index = (m_player_index + 1) % m_player.size();
-		//system("clear");
+		system("clear");
 	}while(CONTINUE_PLAYING == game_state);
+	
 	switch(game_state)
 	{
 		case AI_WINS:     std::cout << "AI Wins!"     << std::endl; break;
@@ -113,92 +116,52 @@ void Game::Play()
 	PrintBoard();
 }
 
-State Game::GameState(Player * p)
+State Game::GameState(Player * p, int row, int col)
 {
-	int row(0), col(0);
-	int streak(0);
+	// The 1D index of the 2D board position
+	row--,col--;
+	int played_position = (row * m_board->m_width) + col;
+	std::cout << "Played position: " << played_position << std::endl;
+	std::cout << " " << row << " " << col << std::endl;
+	bool streak_found(true), streak_contains_position(false);
 	
-	// Check columns for win
-	for(int row_offset=1; row_offset + m_winning_length - 1 <= m_board->m_height; row_offset++)
+	// Check all possible streaks for a winner
+	for(const std::vector<int>& streak : m_board->m_winning_streaks)
 	{
-		for(col=1; col<=m_board->m_width; col++)
+		// Check if streak is a possible winning streak
+		// by finding the position that the player played
+		streak_contains_position = false;
+		for(int streak_position : streak)
 		{
-			for(row=row_offset; row - row_offset + 1 <= m_winning_length; row++)
+			if (played_position == streak_position)
 			{
-				if (m_board->IsCellPlayer(row,col,p->GetCharacter()))
-					streak++;
+				streak_contains_position = true;
+				break;
 			}
-			if (streak == m_winning_length)
+		}
+		if (!streak_contains_position)
+			continue;
+
+		// Check the streak if it is a winner
+		streak_found = true; 
+		for(int streak_position : streak)
+		{
+			if (!m_board->IsCellPlayer(streak_position, p->GetCharacter()))
 			{
-				if (p->IsAI())
-					return AI_WINS;
-				return PLAYER_WINS;
+				streak_found = false;
+				break;
 			}
-			streak = 0;
+		}
+
+		if (streak_found)
+		{
+			if (p->IsAI())
+				return AI_WINS;
+			return PLAYER_WINS;
 		}
 	}
 
-	// Check rows for win
-	for(int col_offset=1; col_offset + m_winning_length - 1 <= m_board->m_width; col_offset++)
-	{
-		for(row=1; row<=m_board->m_width; row++)
-		{
-			for(col=col_offset; col - col_offset + 1 <= m_winning_length; col++)
-			{
-				if (m_board->IsCellPlayer(row,col,p->GetCharacter()))
-					streak++;
-			}
-			if (streak == m_winning_length)
-			{
-				if (p->IsAI())
-					return AI_WINS;
-				return PLAYER_WINS;
-			}
-			streak = 0;
-		}
-	}
-
-	// Check down-right diagonals
-	for(int row_offset=1; row_offset + m_winning_length - 1 <= m_board->m_height; row_offset++)
-	{
-		for(int col_offset=1; col_offset + m_winning_length - 1 <= m_board->m_width; col_offset++)
-		{
-			for(row=row_offset,col = col_offset; col - col_offset + 1 <= m_winning_length && row - row_offset + 1 <= m_winning_length; row++, col++)
-			{
-				if (m_board->IsCellPlayer(row,col,p->GetCharacter()))
-					streak++;
-			}
-			if (streak == m_winning_length)
-			{
-				if (p->IsAI())
-					return AI_WINS;
-				return PLAYER_WINS;
-			}
-			streak = 0;
-		}
-	}
-	
-	// Check up-left diagonals
-	for(int row_offset=m_board->m_height; row_offset - m_winning_length + 1 >=0; row_offset--)
-	{
-		for(int col_offset=1; col_offset + m_winning_length - 1 <= m_board->m_width; col_offset++)
-		{
-			for(row=row_offset,col = col_offset; col - col_offset + 1 <= m_winning_length && row_offset - row + 1 <= m_winning_length; row--, col++)
-			{
-				if (m_board->IsCellPlayer(row,col,p->GetCharacter()))
-					streak++;
-			}
-			if (streak == m_winning_length)
-			{
-				if (p->IsAI())
-					return AI_WINS;
-				return PLAYER_WINS;
-			}
-			streak = 0;
-		}
-	}
-
-	// Draw
+	// Mark it a tie.
 	if (!m_board->HasMorePlays())
 		return TIE;
 	return CONTINUE_PLAYING;
